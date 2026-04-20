@@ -26,3 +26,9 @@ jobs:
       - name: Deploy to S3
         run: |
           aws s3 sync ./website s3://cloud-resume-challenge-kevin-l --delete
+  
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id E3CLT07Z75J4IG \
+            --paths "/*"
