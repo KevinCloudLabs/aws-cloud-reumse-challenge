@@ -1,12 +1,2 @@
-# ---------------------------------------------------------------
-# Copy this file to terraform.tfvars and fill in your values
-# Never commit terraform.tfvars to git
-# ---------------------------------------------------------------
-
-# Your AWS account ID
-# Run: aws sts get-caller-identity --query Account --output text
-account_id = "YOUR_AWS_ACCOUNT_ID"
-
-# Your *.kevinlutes.com certificate ARN — must be in us-east-1
-# Run: aws acm list-certificates --region us-east-1
+account_id          = "YOUR_AWS_ACCOUNT_ID"
 acm_certificate_arn = "arn:aws:acm:us-east-1:YOUR_ACCOUNT_ID:certificate/YOUR_CERT_ID"

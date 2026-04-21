@@ -7,26 +7,14 @@ table = dynamodb.Table(os.environ['DYNAMODB_TABLE_NAME'])
 
 def lambda_handler(event, context):
     response = table.get_item(Key={'id': '0'})
-
     item = response.get('Item')
-
-    if item and 'views' in item:
-        views = int(item['views'])
-    else:
-        views = 0
-
+    views = int(item['views']) if item and 'views' in item else 0
     views += 1
 
-    table.put_item(Item={
-        'id': '0',
-        'views': views
-    })
+    table.put_item(Item={'id': '0', 'views': views})
 
     return {
         "statusCode": 200,
-        "headers": {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*"
-        },
+        "headers": {"Content-Type": "application/json"},
         "body": json.dumps({"views": views})
     }

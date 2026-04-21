@@ -1,9 +1,3 @@
-##################################################################
-# Cloud Resume — test.kevinlutes.com
-# Deploys a full copy of your stack to verify everything works
-# before touching your live resume.kevinlutes.com
-##################################################################
-
 terraform {
   required_version = ">= 1.5"
   required_providers {
@@ -23,17 +17,11 @@ locals {
   name_prefix = "test-resume"
 }
 
-# ------------------------------------------------------------------
-# DATA — look up your existing Route 53 hosted zone
-# ------------------------------------------------------------------
 data "aws_route53_zone" "kevinlutes" {
   name         = "kevinlutes.com"
   private_zone = false
 }
 
-# ------------------------------------------------------------------
-# DYNAMODB — visitor counter table
-# ------------------------------------------------------------------
 resource "aws_dynamodb_table" "visitor_counter" {
   name         = "${local.name_prefix}-visitor-counter"
   billing_mode = "PAY_PER_REQUEST"
@@ -47,7 +35,6 @@ resource "aws_dynamodb_table" "visitor_counter" {
   tags = { Name = "${local.name_prefix}-visitor-counter" }
 }
 
-# Seed the starting item so Lambda doesn't error on first visit
 resource "aws_dynamodb_table_item" "initial_count" {
   table_name = aws_dynamodb_table.visitor_counter.name
   hash_key   = aws_dynamodb_table.visitor_counter.hash_key
@@ -58,13 +45,10 @@ resource "aws_dynamodb_table_item" "initial_count" {
   })
 
   lifecycle {
-    ignore_changes = [item] # Don't reset the count on every terraform apply
+    ignore_changes = [item]
   }
 }
 
-# ------------------------------------------------------------------
-# IAM — role for Lambda to access DynamoDB + CloudWatch logs
-# ------------------------------------------------------------------
 resource "aws_iam_role" "lambda_exec" {
   name = "${local.name_prefix}-lambda-role"
 
@@ -78,13 +62,11 @@ resource "aws_iam_role" "lambda_exec" {
   })
 }
 
-# Basic execution policy (lets Lambda write to CloudWatch Logs)
 resource "aws_iam_role_policy_attachment" "lambda_basic" {
   role       = aws_iam_role.lambda_exec.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Scoped DynamoDB policy — only this table
 resource "aws_iam_role_policy" "dynamodb_access" {
   name = "${local.name_prefix}-dynamodb-access"
   role = aws_iam_role.lambda_exec.id
@@ -92,19 +74,13 @@ resource "aws_iam_role_policy" "dynamodb_access" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect = "Allow"
-      Action = [
-        "dynamodb:GetItem",
-        "dynamodb:PutItem"
-      ]
+      Effect   = "Allow"
+      Action   = ["dynamodb:GetItem", "dynamodb:PutItem"]
       Resource = aws_dynamodb_table.visitor_counter.arn
     }]
   })
 }
 
-# ------------------------------------------------------------------
-# LAMBDA — visitor counter function
-# ------------------------------------------------------------------
 resource "aws_lambda_function" "visitor_counter" {
   function_name    = "${local.name_prefix}-visitor-counter"
   filename         = "${path.module}/lambda/lambda.zip"
@@ -121,13 +97,11 @@ resource "aws_lambda_function" "visitor_counter" {
   }
 }
 
-# CloudWatch log group with 14 day retention
 resource "aws_cloudwatch_log_group" "lambda_logs" {
   name              = "/aws/lambda/${aws_lambda_function.visitor_counter.function_name}"
   retention_in_days = 14
 }
 
-# Lambda Function URL — same approach as your live site
 resource "aws_lambda_function_url" "visitor_counter" {
   function_name      = aws_lambda_function.visitor_counter.function_name
   authorization_type = "NONE"
@@ -140,9 +114,22 @@ resource "aws_lambda_function_url" "visitor_counter" {
   }
 }
 
-# ------------------------------------------------------------------
-# S3 — private bucket (only CloudFront can read it)
-# ------------------------------------------------------------------
+resource "aws_lambda_permission" "allow_public_url" {
+  statement_id           = "AllowPublicAccess"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = aws_lambda_function.visitor_counter.function_name
+  principal              = "*"
+  function_url_auth_type = "NONE"
+}
+
+resource "aws_lambda_permission" "allow_invoke" {
+  statement_id             = "FunctionURLAllowInvokeAction"
+  action                   = "lambda:InvokeFunction"
+  function_name            = aws_lambda_function.visitor_counter.function_name
+  principal                = "*"
+  invoked_via_function_url = true
+}
+
 resource "aws_s3_bucket" "resume" {
   bucket = "${local.name_prefix}-site-${var.account_id}"
   tags   = { Name = "${local.name_prefix}-site" }
@@ -161,9 +148,6 @@ resource "aws_s3_bucket_versioning" "resume" {
   versioning_configuration { status = "Enabled" }
 }
 
-# ------------------------------------------------------------------
-# CLOUDFRONT — CDN + HTTPS
-# ------------------------------------------------------------------
 resource "aws_cloudfront_origin_access_control" "resume" {
   name                              = "${local.name_prefix}-oac"
   origin_access_control_origin_type = "s3"
@@ -171,15 +155,14 @@ resource "aws_cloudfront_origin_access_control" "resume" {
   signing_protocol                  = "sigv4"
 }
 
-# S3 bucket policy — only allow CloudFront to read
 resource "aws_s3_bucket_policy" "resume" {
   bucket = aws_s3_bucket.resume.id
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Sid    = "AllowCloudFrontRead"
-      Effect = "Allow"
+      Sid       = "AllowCloudFrontRead"
+      Effect    = "Allow"
       Principal = { Service = "cloudfront.amazonaws.com" }
       Action    = "s3:GetObject"
       Resource  = "${aws_s3_bucket.resume.arn}/*"
@@ -244,9 +227,6 @@ resource "aws_cloudfront_distribution" "resume" {
   tags = { Name = "${local.name_prefix}-distribution" }
 }
 
-# ------------------------------------------------------------------
-# ROUTE 53 — point test.kevinlutes.com → CloudFront
-# ------------------------------------------------------------------
 resource "aws_route53_record" "resume" {
   zone_id = data.aws_route53_zone.kevinlutes.zone_id
   name    = local.domain_name
@@ -257,23 +237,4 @@ resource "aws_route53_record" "resume" {
     zone_id                = aws_cloudfront_distribution.resume.hosted_zone_id
     evaluate_target_health = false
   }
-}
-
-# ------------------------------------------------------------------
-# LAMBDA PERMISSION — allow public invocation via Function URL
-# ------------------------------------------------------------------
-resource "aws_lambda_permission" "allow_public_url" {
-  statement_id           = "AllowPublicAccess"
-  action                 = "lambda:InvokeFunctionUrl"
-  function_name          = aws_lambda_function.visitor_counter.function_name
-  principal              = "*"
-  function_url_auth_type = "NONE"
-}
-
-resource "aws_lambda_permission" "allow_invoke" {
-  statement_id             = "FunctionURLAllowInvokeAction"
-  action                   = "lambda:InvokeFunction"
-  function_name            = aws_lambda_function.visitor_counter.function_name
-  principal                = "*"
-  invoked_via_function_url = true
 }
