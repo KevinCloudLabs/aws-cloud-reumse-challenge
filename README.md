@@ -1,6 +1,6 @@
 # ☁️ AWS Cloud Resume Challenge
 
-A full-stack, cloud-native resume hosted entirely on AWS — built as part of the [Cloud Resume Challenge](https://cloudresumechallenge.dev/) by Forrest Brazeal. In this project I demonstrate real-world cloud engineering skills including infrastructure as code, serverless backends, CI/CD automation, and secure HTTPS delivery.
+A full-stack, cloud-native resume hosted entirely on AWS — built as part of the [Cloud Resume Challenge](https://cloudresumechallenge.dev/). In this project I demonstrate real-world cloud engineering skills including infrastructure as code, serverless backends, CI/CD automation, and secure HTTPS delivery.
 
 🔗 **Live Site:** [resume.kevinlutes.com](https://resume.kevinlutes.com)
 
@@ -17,7 +17,7 @@ A full-stack, cloud-native resume hosted entirely on AWS — built as part of th
 | Service | Purpose |
 |---|---|
 | **S3** | Hosts the static resume website (HTML/CSS/JS) |
-| **CloudFront** | CDN for low-latency global delivery and HTTPS enforcement |
+| **CloudFront** | CDN for low-latency global delivery, origin security and HTTPS enforcement |
 | **Route 53** | Custom domain (`resume.kevinlutes.com`) with DNS routing |
 | **ACM** | SSL/TLS certificate for HTTPS on the custom domain |
 | **Lambda** | Serverless function to read/write the visitor counter |
