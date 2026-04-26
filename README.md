@@ -69,6 +69,12 @@ The resume page displays a real-time visitor count powered by a serverless backe
 
 ---
 
+## ✨ Personal Twist
+
+As an addition beyond the core challenge, I integrated **Google Analytics 4 (GA4)** for frontend visitor tracking. Rather than using a native AWS analytics option (CloudFront logs, CloudWatch, or Pinpoint), I chose GA4 for its free pricing and richer out-of-the-box insights like visitor location, device, and traffic source — with no added AWS cost.
+
+---
+
 ## 🏗️ Infrastructure as Code (Terraform)
 
 All AWS resources are defined in Terraform — nothing was clicked together in the console (after initial setup). This includes:
@@ -120,6 +126,6 @@ aws cloudfront create-invalidation --distribution-id YOUR-DIST-ID --paths "/*"
 - Managing cloud infrastructure with Terraform (IaC)
 - Automating deployments with GitHub Actions CI/CD
 - Understanding CORS configuration for cross-origin Lambda Function URLs
+- Integrating Google Analytics 4 for frontend visitor tracking and evaluating it against native AWS analytics options
 
 ---
-
